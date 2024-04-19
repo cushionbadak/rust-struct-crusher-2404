@@ -29,12 +29,28 @@ fn visit_horizontal(source_code: &str, cursor: &mut TreeCursor, acc: &mut Vec<Ty
 pub fn find_type(source_code: &str, cursor: &mut TreeCursor, acc: &mut Vec<TypePosInfo>) {
     let node = cursor.node();
     match node.kind() {
-        "type_identifier" => {
+        // https://github.com/tree-sitter/tree-sitter-rust/blob/b77c0d8ac28a7c143224e6ed9b4f9e4bd044ff5b/src/node-types.json#L393-L464
+        "abstract_type"
+        | "array_type"
+        | "bounded_type"
+        | "dynamic_type"
+        | "function_type"
+        | "generic_type"
+        | "macro_invocation"
+        | "metavariable"
+        | "never_type"
+        | "pointer_type"
+        | "reference_type"
+        | "removed_trait_bound"
+        | "scoped_type_identifier"
+        | "tuple_type"
+        | "type_identifier"
+        | "unit_type" => {
             let start_byte = node.start_byte();
             let end_byte = node.end_byte();
 
             let struct_name = node.to_string();
-            dbg!(&struct_name);
+            // dbg!(&struct_name);
 
             // avoid unicode-byte index mismatch problem
             // - just ignore them
