@@ -1,0 +1,3 @@
+https://github.com/rust-lang/rust/blob/9db7a745252aff188e5935141a7c15d913a3a21a/tests/ui/destructuring-assignment/struct-or-enum-variant-path.rs#L15
+https://github.com/rust-lang/rust/blob/9f432d7b44d5c4ac0ce76fed8315ffac8dcab8f9/src/tools/miri/tests/pass/async-closure-drop.rs#L24
+https://github.com/rust-lang/rust/blob/master/tests/ui/async-await/async-closures/different-projection-lengths-for-different-upvars.rs

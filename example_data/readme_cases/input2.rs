@@ -1,0 +1,1 @@
+struct DropMe(&'static str);
