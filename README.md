@@ -31,3 +31,14 @@ struct DropMe(& 'static str);
 struct S;
 struct DropMe();
 ```
+
+### How to use?
+- Use with `cargo run`
+```Bash
+# Example
+❯ cargo run -- --input-dir example_data --output-dir ./out
+
+11it [00:00, 1954.17it/s]
+Number of generated files: 8
+Created output directory: ./out
+```

@@ -2,7 +2,7 @@ use std::{fs, path::PathBuf};
 
 use clap::Parser;
 use tqdm::tqdm;
-use tree_sitter::{Tree, TreeCursor};
+use tree_sitter::TreeCursor;
 use walkdir::WalkDir;
 
 #[derive(Debug)]
