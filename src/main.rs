@@ -43,6 +43,12 @@ pub fn find_structs(source_code: &str, cursor: &mut TreeCursor, acc: &mut Vec<St
             .map(|n| n.utf8_text(&source_code.as_bytes()).unwrap().to_string())
             .unwrap_or_default();
 
+        // avoid unicode-byte index mismatch problem
+        // for example, "tests/ui/lint/lint-nonstandard-style-unicode-1.rs"
+        // - just ignore them
+        let source_chars: Vec<char> = source_code.chars().collect();
+        if source_chars.len() <= end_byte - 1 { return; }
+
         let struct_form = determine_struct_form(source_code, cursor);
 
         let struct_info: StructInfo = (start_byte, end_byte, struct_form, struct_name);
@@ -125,6 +131,7 @@ pub fn main() {
             let path = entry.path();
             if let Some(ext) = path.extension() {
                 if path.is_file() && ext.to_string_lossy() == "rs" {
+                    // dbg!(path);
                     let source_code = fs::read_to_string(path).unwrap();
                     r.append(&mut get_struct_crushed_sources(&source_code));
                 }
