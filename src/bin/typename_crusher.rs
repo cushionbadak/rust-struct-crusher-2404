@@ -5,25 +5,18 @@ use tqdm::tqdm;
 use tree_sitter::TreeCursor;
 use walkdir::WalkDir;
 
-#[derive(Debug)]
-pub enum StructForm {
-    Unit,
-    Tuple,
-    Struct,
-}
+type TypePosInfo = (usize, usize, String);
 
-type StructInfo = (usize, usize, StructForm, String);
-
-fn visit_vertical(source_code: &str, cursor: &mut TreeCursor, acc: &mut Vec<StructInfo>) {
+fn visit_vertical(source_code: &str, cursor: &mut TreeCursor, acc: &mut Vec<TypePosInfo>) {
     if cursor.goto_first_child() {
         visit_horizontal(source_code, cursor, acc);
         cursor.goto_parent();
     }
 }
 
-fn visit_horizontal(source_code: &str, cursor: &mut TreeCursor, acc: &mut Vec<StructInfo>) {
+fn visit_horizontal(source_code: &str, cursor: &mut TreeCursor, acc: &mut Vec<TypePosInfo>) {
     loop {
-        find_structs(source_code, cursor, acc);
+        find_type(source_code, cursor, acc);
 
         visit_vertical(source_code, cursor, acc);
 
@@ -33,62 +26,42 @@ fn visit_horizontal(source_code: &str, cursor: &mut TreeCursor, acc: &mut Vec<St
     }
 }
 
-pub fn find_structs(source_code: &str, cursor: &mut TreeCursor, acc: &mut Vec<StructInfo>) {
+pub fn find_type(source_code: &str, cursor: &mut TreeCursor, acc: &mut Vec<TypePosInfo>) {
     let node = cursor.node();
-    if node.kind() == "struct_item" {
-        let start_byte = node.start_byte();
-        let end_byte = node.end_byte();
-        let struct_name = node
-            .child_by_field_name("name")
-            .map(|n| n.utf8_text(&source_code.as_bytes()).unwrap().to_string())
-            .unwrap_or_default();
+    match node.kind() {
+        "type_identifier" => {
+            let start_byte = node.start_byte();
+            let end_byte = node.end_byte();
 
-        // avoid unicode-byte index mismatch problem
-        // for example, "tests/ui/lint/lint-nonstandard-style-unicode-1.rs"
-        // - just ignore them
-        let source_chars: Vec<char> = source_code.chars().collect();
-        if source_chars.len() <= end_byte - 1 {
-            return;
+            let struct_name = node.to_string();
+            dbg!(&struct_name);
+
+            // avoid unicode-byte index mismatch problem
+            // - just ignore them
+            let source_chars: Vec<char> = source_code.chars().collect();
+            if source_chars.len() <= end_byte - 1 {
+                return;
+            }
+
+            let type_info: TypePosInfo = (start_byte, end_byte, struct_name);
+            acc.push(type_info);
         }
-
-        let struct_form = determine_struct_form(source_code, cursor);
-
-        let struct_info: StructInfo = (start_byte, end_byte, struct_form, struct_name);
-        // dbg!(&struct_info);
-        acc.push(struct_info);
+        _ => {} // Other node kinds can be handled as needed
     }
 }
 
-pub fn determine_struct_form(source_code: &str, cursor: &mut TreeCursor) -> StructForm {
-    let node = cursor.node();
-    let end_byte_idx = node.end_byte();
-    // dbg!(start_byte_idx, end_byte_idx);
+pub fn modify_types(source_code: &str, structs: &Vec<TypePosInfo>) -> Vec<String> {
+    const NEW_EXPRS: [&str; 4] = ["", "i32", "str", "Copy"];
+    const SORTS: usize = NEW_EXPRS.len();
+    let mut modified_versions = vec![source_code.to_string(); structs.len() * SORTS]; // Initialize with the original code for each version
 
-    let source_chars: Vec<char> = source_code.chars().collect();
-    let target_char_1 = source_chars[end_byte_idx - 1];
-    let target_char_2 = source_chars[end_byte_idx - 2];
-    // dbg!(target_char_1, target_char_2);
-    if target_char_1 == '}' {
-        StructForm::Struct
-    } else if target_char_2 == ')' {
-        StructForm::Tuple
-    } else {
-        StructForm::Unit
-    }
-}
-
-pub fn modify_structs(source_code: &str, structs: &Vec<StructInfo>) -> Vec<String> {
-    let mut modified_versions = vec![source_code.to_string(); structs.len()]; // Initialize with the original code for each version
-
-    for (i, &(start, end, ref form, ref name)) in structs.iter().enumerate() {
-        let version = &mut modified_versions[i];
+    for (i, &(start, end, ref _name)) in structs.iter().enumerate() {
         let before = &source_code[..start];
         let after = &source_code[end..];
-        let new_declaration = match form {
-            StructForm::Tuple => format!("struct {};", name),
-            _ => format!("struct {}();", name),
-        };
-        *version = format!("{}{}{}", before, new_declaration, after);
+
+        for (j, n) in NEW_EXPRS.iter().enumerate() {
+            modified_versions[i * SORTS + j] = format!("{}{}{}", before, n, after);
+        }
     }
 
     modified_versions
@@ -100,10 +73,10 @@ pub fn get_struct_crushed_sources(source_code: &str) -> Vec<String> {
     parser.set_language(&language).unwrap();
 
     let tree = parser.parse(&source_code, None).unwrap();
-    let mut found_structs: Vec<StructInfo> = Vec::new();
+    let mut found_structs: Vec<TypePosInfo> = Vec::new();
     visit_vertical(&source_code, &mut tree.walk(), &mut found_structs);
 
-    modify_structs(&source_code, &found_structs)
+    modify_types(&source_code, &found_structs)
 }
 
 // use clap cli parser

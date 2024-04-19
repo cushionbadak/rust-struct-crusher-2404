@@ -42,3 +42,18 @@ struct DropMe();
 Number of generated files: 8
 Created output directory: ./out
 ```
+
+
+# Typename Crusher
+
+try to crush type name!
+
+### Goal Examples
+```Rust
+fn foo(a: t) {}      // Input with type
+
+fn foo(a: ) {}       // Output 1 - Remove type
+fn foo(a: i32) {}    // Output 2 - change to i32
+fn foo(a: str) {}    // Output 3 - change to str
+fn foo(a: Copy) {}   // Output 4 - chagne to Copy
+```
